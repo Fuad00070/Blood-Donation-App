@@ -1,27 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart'; // flutterfire configure কমান্ডের মাধ্যমে এটি তৈরি হয়
 import 'screens/home_screen.dart';
 import 'screens/search_screen.dart';
 import 'screens/profile_screen.dart';
-import 'screens/auth/login_screen.dart';
 import 'screens/splash_screen.dart';
 
-void main() {
-  runApp(const BloodDonorApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // ফায়ারবেস ইনিশিয়ালাইজেশন
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  runApp(const BloodDonationApp());
 }
 
-class BloodDonorApp extends StatelessWidget {
-  const BloodDonorApp({super.key});
+class BloodDonationApp extends StatelessWidget {
+  const BloodDonationApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Blood Donor Finder',
+      title: 'Blood Donor',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
         useMaterial3: true,
       ),
-      home: const SplashScreen(), // অ্যাপটি এখন স্প্ল্যাশ স্ক্রিন থেকে শুরু হবে
+      home: const SplashScreen(),
     );
   }
 }

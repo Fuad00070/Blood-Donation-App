@@ -75,11 +75,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               child: Column(
                 children: [
                   const Text(
-                    "BLOOD LINK",
+                    "BLOOD DONATION",
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: 3,
+                      letterSpacing: 2,
                       color: AppColors.primaryRed,
                     ),
                   ),
