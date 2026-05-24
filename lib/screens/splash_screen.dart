@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/constants.dart';
 import 'auth/login_screen.dart';
+import '../main.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -25,11 +27,29 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _controller.forward();
 
+    _checkUserStatus();
+  }
+
+  void _checkUserStatus() {
     Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
+      // ফায়ারবেস অথেনটিকেশন চেক করা
+      User? user = FirebaseAuth.instance.currentUser;
+      
+      if (mounted) {
+        if (user != null) {
+          // ইউজার লগইন করা থাকলে হোম স্ক্রিনে যাবে
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const MainScreen()),
+          );
+        } else {
+          // লগইন না থাকলে লগইন স্ক্রিনে যাবে
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+          );
+        }
+      }
     });
   }
 
@@ -75,7 +95,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               child: Column(
                 children: [
                   const Text(
-                    "BLOOD DONATION",
+                    "BLOOD LINK",
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.w900,
