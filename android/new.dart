@@ -1,11 +1,12 @@
-import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/material.dart';
-import 'firebase_options.dart'; // এটি অটোমেটিক তৈরি হবে flutterfire configure করার পর
-
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  runApp(const BloodDonorApp());
+static Future<void> _saveTokenToFirestore
+(
+String token) async {
+User? user = FirebaseAuth.instance.currentUser;
+if (user != null) {
+// update এর বদলে set এবং SetOptions(merge: true) ব্যবহার করা হয়েছে
+await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+'fcmToken': token,
+'lastActive': FieldValue.serverTimestamp(),
+}, SetOptions(merge: true)).catchError((e) => print("Error saving token: $e"));
+}
 }

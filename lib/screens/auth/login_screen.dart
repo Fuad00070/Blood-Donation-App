@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../widgets/custom_button.dart';
 import '../../utils/constants.dart';
+import '../../utils/notification_service.dart'; // নোটিফিকেশন সার্ভিস ইমপোর্ট করলাম
 import 'register_screen.dart';
 import '../../main.dart';
 
@@ -29,11 +30,14 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // ফায়ারবেস অথেনটিকেশন দিয়ে লগইন
+      // ১. ফায়ারবেস অথেনটিকেশন দিয়ে লগইন
       await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+
+      // ২. লগইন সফল হলে নোটিফিকেশন টোকেন আপডেট করা (জরুরি)
+      await NotificationService.updateToken();
 
       if (mounted) {
         Navigator.pushReplacement(
@@ -127,18 +131,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
                     borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 15),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {},
-                  child: const Text(
-                    "Forgot Password?",
-                    style: TextStyle(color: AppColors.primaryRed, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),

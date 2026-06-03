@@ -12,7 +12,7 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.8
 
-  # Firebase packages with compatible versions for Firebase Core 3.x
+  # Firebase packages
   firebase_core: ^3.10.1
   firebase_auth: ^5.4.1
   cloud_firestore: ^5.6.2
@@ -23,11 +23,22 @@ dependencies:
   url_launcher: ^6.3.1
   intl: ^0.19.0
   image_picker: ^1.1.2
+  cloudinary_public: ^0.23.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.1
+
+# অ্যাপ আইকন কনফিগারেশন
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/app_icon.png"
+  min_sdk_android: 21 # android min sdk value
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/

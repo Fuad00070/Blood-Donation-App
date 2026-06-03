@@ -10,12 +10,10 @@ import 'utils/notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // ফায়ারবেস ইনিশিয়ালাইজেশন
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // পুশ নোটিফিকেশন সার্ভিস চালু করা
   await NotificationService.initialize();
 
   runApp(const BloodDonationApp());
@@ -28,6 +26,8 @@ class BloodDonationApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      // এই কি (Key) টি নোটিফিকেশন থেকে নেভিগেট করতে সাহায্য করবে
+      navigatorKey: NotificationService.navigatorKey, 
       title: 'Blood Donation App',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
@@ -48,7 +48,6 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  // সব প্রধান স্ক্রিনগুলো এখানে লিস্ট করা আছে
   final List<Widget> _pages = [
     const HomeScreen(),
     const SearchDonorScreen(),

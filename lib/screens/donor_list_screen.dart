@@ -5,46 +5,65 @@ import '../utils/constants.dart';
 
 class DonorListScreen extends StatelessWidget {
   final String bloodGroup;
-  final String? location;
+  final String? division;
+  final String? district;
+  final String? upazila;
 
-  const DonorListScreen({super.key, required this.bloodGroup, this.location});
+  const DonorListScreen({
+    super.key, 
+    required this.bloodGroup, 
+    this.division, 
+    this.district, 
+    this.upazila
+  });
 
   @override
   Widget build(BuildContext context) {
+    // ফায়ারবেস কুয়েরি শুরু
     Query query = FirebaseFirestore.instance
         .collection('users')
         .where('bloodGroup', isEqualTo: bloodGroup);
 
-    if (location != null && location!.isNotEmpty) {
-      query = query.where('location', isEqualTo: location);
+    // স্মার্ট ফিল্টারিং লজিক:
+    // ১. যদি উপজেলা সিলেক্ট করা থাকে, তবে শুধু ওই উপজেলার ডোনার দেখাবে।
+    // ২. যদি উপজেলা না থাকে কিন্তু জেলা থাকে, তবে ওই জেলার সব ডোনার দেখাবে।
+    // ৩. যদি শুধু বিভাগ থাকে, তবে ওই বিভাগের সব ডোনার দেখাবে।
+    
+    if (upazila != null && upazila!.isNotEmpty) {
+      query = query.where('upazila', isEqualTo: upazila);
+    } else if (district != null && district!.isNotEmpty) {
+      query = query.where('district', isEqualTo: district);
+    } else if (division != null && division!.isNotEmpty) {
+      query = query.where('division', isEqualTo: division);
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text('$bloodGroup Donors', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryRed,
+        elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: query.snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(child: Text("Something went wrong"));
-          }
-
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: AppColors.primaryRed));
           }
 
-          if (snapshot.data!.docs.isEmpty) {
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.person_search, size: 80, color: Colors.grey[300]),
-                  const SizedBox(height: 10),
-                  const Text("No donors found in this area", style: TextStyle(color: Colors.grey)),
+                  Icon(Icons.person_search_rounded, size: 80, color: Colors.grey[300]),
+                  const SizedBox(height: 15),
+                  Text(
+                    "No $bloodGroup donors found in ${upazila ?? district ?? division ?? 'this area'}",
+                    style: const TextStyle(color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
                 ],
               ),
             );
@@ -52,43 +71,38 @@ class DonorListScreen extends StatelessWidget {
 
           return ListView.builder(
             padding: const EdgeInsets.all(15),
-            itemCount: snapshot.data!.docs.length, // .size এর বদলে .length করা হলো
+            itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
               var donor = snapshot.data!.docs[index].data() as Map<String, dynamic>;
-              
-              return Card(
-                elevation: 2,
-                margin: const EdgeInsets.only(bottom: 15),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+              String? photo = donor['profileImage'];
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+                ),
                 child: ListTile(
-                  contentPadding: const EdgeInsets.all(15),
+                  contentPadding: const EdgeInsets.all(12),
                   leading: CircleAvatar(
                     radius: 25,
                     backgroundColor: AppColors.secondaryRed,
-                    child: Text(donor['bloodGroup'] ?? "", style: const TextStyle(color: AppColors.primaryRed, fontWeight: FontWeight.bold)),
+                    backgroundImage: photo != null ? NetworkImage(photo) : null,
+                    child: photo == null ? const Icon(Icons.person, color: AppColors.primaryRed) : null,
                   ),
-                  title: Text(donor['name'] ?? "Unknown", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 5),
-                      Row(
-                        children: [
-                          const Icon(Icons.location_on, size: 14, color: Colors.grey),
-                          const SizedBox(width: 5),
-                          Text(donor['location'] ?? "No location", style: const TextStyle(color: Colors.grey)),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      Text("Contact: ${donor['phone'] ?? "N/A"}", style: const TextStyle(fontSize: 13)),
-                    ],
-                  ),
+                  title: Text(donor['name'] ?? "Donor", style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text(donor['location'] ?? "${donor['upazila']}, ${donor['district']}", style: const TextStyle(fontSize: 12)),
                   trailing: IconButton(
-                    icon: const Icon(Icons.phone, color: Colors.green, size: 30),
+                    icon: const CircleAvatar(
+                      backgroundColor: Colors.green,
+                      child: Icon(Icons.phone, color: Colors.white, size: 18),
+                    ),
                     onPressed: () async {
-                      final Uri launchUri = Uri(scheme: 'tel', path: donor['phone']);
-                      if (await canLaunchUrl(launchUri)) {
-                        await launchUrl(launchUri);
+                      final phone = donor['phone'];
+                      if (phone != null) {
+                        final Uri launchUri = Uri(scheme: 'tel', path: phone);
+                        if (await canLaunchUrl(launchUri)) await launchUrl(launchUri);
                       }
                     },
                   ),

@@ -16,6 +16,7 @@ class MyRequestsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text("My Blood Requests", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primaryRed,
+        elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -29,44 +30,48 @@ class MyRequestsScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator(color: AppColors.primaryRed));
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.history_outlined, size: 80, color: Colors.grey[300]),
-                  const SizedBox(height: 10),
-                  const Text("You haven't posted any requests yet.", style: TextStyle(color: Colors.grey)),
-                ],
-              ),
-            );
+            return const Center(child: Text("You haven't posted any requests yet.", style: TextStyle(color: Colors.grey)));
           }
 
           return ListView.builder(
             padding: const EdgeInsets.all(15),
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
-              var requestDoc = snapshot.data!.docs[index];
-              var request = requestDoc.data() as Map<String, dynamic>;
-              
-              return Card(
-                elevation: 2,
+              var doc = snapshot.data!.docs[index];
+              var request = doc.data() as Map<String, dynamic>;
+              bool isCompleted = request['status'] == 'completed';
+
+              return Container(
                 margin: const EdgeInsets.only(bottom: 15),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: isCompleted ? Colors.green.shade100 : Colors.grey.shade200),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
+                ),
                 child: ListTile(
                   contentPadding: const EdgeInsets.all(15),
                   leading: CircleAvatar(
-                    backgroundColor: AppColors.secondaryRed,
-                    child: Text(request['bloodGroup'] ?? "?", style: const TextStyle(color: AppColors.primaryRed, fontWeight: FontWeight.bold)),
+                    backgroundColor: isCompleted ? Colors.green[50] : AppColors.secondaryRed,
+                    child: Text(request['bloodGroup'] ?? "?", style: TextStyle(color: isCompleted ? Colors.green : AppColors.primaryRed, fontWeight: FontWeight.bold)),
                   ),
                   title: Text(request['hospitalName'] ?? "Hospital", style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text("Units: ${request['units']} • Status: ${request['status'] ?? 'Pending'}"),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                    onPressed: () => _confirmDelete(context, requestDoc.id),
+                  subtitle: Text("Status: ${isCompleted ? 'Collected' : 'Pending'}", style: TextStyle(color: isCompleted ? Colors.green : Colors.orange)),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!isCompleted)
+                        IconButton(
+                          icon: const Icon(Icons.check_circle_outline, color: Colors.green),
+                          onPressed: () => _markAsCollected(context, doc.id),
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                        onPressed: () => _confirmDelete(context, doc.id),
+                      ),
+                    ],
                   ),
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => RequestDetailsScreen(request: request)));
-                  },
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => RequestDetailsScreen(request: request))),
                 ),
               );
             },
@@ -76,12 +81,31 @@ class MyRequestsScreen extends StatelessWidget {
     );
   }
 
+  void _markAsCollected(BuildContext context, String docId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Mark as Collected?"),
+        content: const Text("Did you find the blood you were looking for?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("No")),
+          TextButton(
+            onPressed: () async {
+              await FirebaseFirestore.instance.collection('blood_requests').doc(docId).update({'status': 'completed'});
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text("Yes, Found!", style: TextStyle(color: Colors.green)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _confirmDelete(BuildContext context, String docId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Delete Request?"),
-        content: const Text("Are you sure you want to remove this blood request?"),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           TextButton(
