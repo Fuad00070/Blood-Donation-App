@@ -23,21 +23,33 @@ class MyRequestsScreen extends StatelessWidget {
         stream: FirebaseFirestore.instance
             .collection('blood_requests')
             .where('postedBy', isEqualTo: user?.uid)
-            .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: AppColors.primaryRed));
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("You haven't posted any requests yet.", style: TextStyle(color: Colors.grey)));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.post_add, size: 80, color: Colors.grey[200]),
+                  const SizedBox(height: 10),
+                  const Text("You haven't posted any requests yet.", style: TextStyle(color: Colors.grey)),
+                ],
+              ),
+            );
           }
+
+          // ইন-মেমোরি সর্টিং (যদি ইনডেক্স এরর এড়াতে চান)
+          var docs = snapshot.data!.docs;
+          docs.sort((a, b) => (b['createdAt'] as Timestamp).compareTo(a['createdAt'] as Timestamp));
 
           return ListView.builder(
             padding: const EdgeInsets.all(15),
-            itemCount: snapshot.data!.docs.length,
+            itemCount: docs.length,
             itemBuilder: (context, index) {
-              var doc = snapshot.data!.docs[index];
+              var doc = docs[index];
               var request = doc.data() as Map<String, dynamic>;
               bool isCompleted = request['status'] == 'completed';
 
@@ -55,19 +67,28 @@ class MyRequestsScreen extends StatelessWidget {
                     backgroundColor: isCompleted ? Colors.green[50] : AppColors.secondaryRed,
                     child: Text(request['bloodGroup'] ?? "?", style: TextStyle(color: isCompleted ? Colors.green : AppColors.primaryRed, fontWeight: FontWeight.bold)),
                   ),
-                  title: Text(request['hospitalName'] ?? "Hospital", style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text("Status: ${isCompleted ? 'Collected' : 'Pending'}", style: TextStyle(color: isCompleted ? Colors.green : Colors.orange)),
+                  title: Text(
+                    request['hospitalName'] ?? "Hospital", 
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(
+                    "Status: ${isCompleted ? 'Collected' : 'Pending'}", 
+                    style: TextStyle(color: isCompleted ? Colors.green : Colors.orange, fontSize: 13),
+                  ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (!isCompleted)
                         IconButton(
-                          icon: const Icon(Icons.check_circle_outline, color: Colors.green),
+                          icon: const Icon(Icons.check_circle, color: Colors.green),
                           onPressed: () => _markAsCollected(context, doc.id),
+                          tooltip: 'Mark as Found',
                         ),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                        icon: const Icon(Icons.delete_forever, color: Colors.red),
                         onPressed: () => _confirmDelete(context, doc.id),
+                        tooltip: 'Delete Post',
                       ),
                     ],
                   ),
@@ -85,16 +106,17 @@ class MyRequestsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Mark as Collected?"),
-        content: const Text("Did you find the blood you were looking for?"),
+        title: const Text("Found Blood?"),
+        content: const Text("This will mark your request as completed."),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("No")),
-          TextButton(
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+          ElevatedButton(
             onPressed: () async {
               await FirebaseFirestore.instance.collection('blood_requests').doc(docId).update({'status': 'completed'});
               if (context.mounted) Navigator.pop(context);
             },
-            child: const Text("Yes, Found!", style: TextStyle(color: Colors.green)),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text("Yes, Found!", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -106,14 +128,16 @@ class MyRequestsScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Delete Request?"),
+        content: const Text("Are you sure you want to remove this post forever?"),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-          TextButton(
+          ElevatedButton(
             onPressed: () async {
               await FirebaseFirestore.instance.collection('blood_requests').doc(docId).delete();
               if (context.mounted) Navigator.pop(context);
             },
-            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text("Delete", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

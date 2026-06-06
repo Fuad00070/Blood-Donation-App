@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 import '../utils/constants.dart';
 import '../utils/location_data.dart';
 
@@ -42,7 +43,6 @@ class _SearchDonorScreenState extends State<SearchDonorScreen> {
             ),
             child: Column(
               children: [
-                // Blood Group Selector
                 SizedBox(
                   height: 45,
                   child: ListView.builder(
@@ -72,7 +72,6 @@ class _SearchDonorScreenState extends State<SearchDonorScreen> {
                   ),
                 ),
                 const SizedBox(height: 15),
-                // Location Dropdowns
                 _buildDropdown("Division", _selectedDivision, LocationData.bdLocation.keys.toList(), (val) {
                   setState(() { _selectedDivision = val; _selectedDistrict = null; _selectedUpazila = null; });
                 }),
@@ -104,7 +103,6 @@ class _SearchDonorScreenState extends State<SearchDonorScreen> {
                 if (snapshot.hasError) return Center(child: Text("Error: ${snapshot.error}"));
                 if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator(color: AppColors.primaryRed));
                 
-                // নিজের প্রোফাইল বাদ দেওয়া (Exclude current user)
                 final List<DocumentSnapshot> donors = snapshot.data?.docs.where((doc) {
                   return doc.id != currentUserId; 
                 }).toList() ?? [];
@@ -116,11 +114,7 @@ class _SearchDonorScreenState extends State<SearchDonorScreen> {
                       children: [
                         Icon(Icons.person_search_rounded, size: 80, color: Colors.grey[200]),
                         const SizedBox(height: 10),
-                        const Text("No other donors found", style: TextStyle(color: Colors.grey, fontSize: 16)),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 40),
-                          child: Text("Hint: If your friend isn't showing, ask them to update their profile with location.", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12)),
-                        ),
+                        const Text("No donors found", style: TextStyle(color: Colors.grey, fontSize: 16)),
                       ],
                     ),
                   );
@@ -159,10 +153,11 @@ class _SearchDonorScreenState extends State<SearchDonorScreen> {
   }
 
   Stream<QuerySnapshot> _getDonorStream() {
+    // এখানে .where('isAvailable', isEqualTo: true) সরিয়ে ফেলা হয়েছে 
+    // যাতে ইনঅ্যাক্টিভ ইউজাররাও সার্চে আসে এবং আমরা তাদের স্ট্যাটাস দেখাতে পারি।
     Query query = FirebaseFirestore.instance.collection('users')
         .where('bloodGroup', isEqualTo: _selectedGroup);
 
-    // শুধু যদি লোকেশন সিলেক্ট করা থাকে তবেই ফিল্টার করবে
     if (_selectedUpazila != null) {
       query = query.where('upazila', isEqualTo: _selectedUpazila);
     } else if (_selectedDistrict != null) {
@@ -176,58 +171,115 @@ class _SearchDonorScreenState extends State<SearchDonorScreen> {
 
   Widget _buildDonorCard(Map<String, dynamic> donor) {
     String? photo = donor['profileImage'];
-    return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 30,
-            backgroundColor: AppColors.secondaryRed,
-            backgroundImage: photo != null ? NetworkImage(photo) : null,
-            child: photo == null ? const Icon(Icons.person, color: AppColors.primaryRed, size: 30) : null,
-          ),
-          const SizedBox(width: 15),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    Timestamp? lastDonation = donor['lastDonationDate'];
+    bool isAvailable = donor['isAvailable'] ?? false;
+    
+    // Eligibility Check
+    bool isEligible = true;
+    String nextDate = "";
+    if (lastDonation != null) {
+      DateTime nextEligibleDate = lastDonation.toDate().add(const Duration(days: 120));
+      isEligible = DateTime.now().isAfter(nextEligibleDate);
+      nextDate = DateFormat('dd MMM yyyy').format(nextEligibleDate);
+    }
+
+    // চূড়ান্তভাবে ডোনার এভেইলেবল কি না (অ্যাক্টিভ বাটন + ৪ মাস সময়)
+    bool canDonate = isAvailable && isEligible;
+
+    return Opacity(
+      opacity: canDonate ? 1.0 : 0.6, // এভেইলেবল না হলে ঝাপসা দেখাবে
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 15),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+          border: canDonate ? null : Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          children: [
+            Row(
               children: [
-                Text(donor['name'] ?? "Unknown Donor", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on, size: 14, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        donor['upazila'] != null 
-                          ? "${donor['upazila']}, ${donor['district']}" 
-                          : (donor['location'] ?? "Unknown Location"), 
-                        style: const TextStyle(color: Colors.grey, fontSize: 13),
-                        overflow: TextOverflow.ellipsis,
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: canDonate ? AppColors.secondaryRed : Colors.grey[200],
+                  backgroundImage: photo != null ? NetworkImage(photo) : null,
+                  child: photo == null ? Icon(Icons.person, color: canDonate ? AppColors.primaryRed : Colors.grey, size: 30) : null,
+                ),
+                const SizedBox(width: 15),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(donor['name'] ?? "Unknown Donor", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on, size: 14, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              donor['upazila'] != null 
+                                ? "${donor['upazila']}, ${donor['district']}" 
+                                : (donor['location'] ?? "Unknown Location"), 
+                              style: const TextStyle(color: Colors.grey, fontSize: 13),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: CircleAvatar(
+                    backgroundColor: canDonate ? Colors.green : Colors.grey[300], 
+                    child: Icon(Icons.phone, color: canDonate ? Colors.white : Colors.grey, size: 18)
+                  ),
+                  onPressed: canDonate ? () async {
+                    final phone = donor['phone'];
+                    if (phone != null) {
+                      final Uri launchUri = Uri(scheme: 'tel', path: phone);
+                      if (await canLaunchUrl(launchUri)) await launchUrl(launchUri);
+                    }
+                  } : null,
                 ),
               ],
             ),
-          ),
-          IconButton(
-            icon: const CircleAvatar(backgroundColor: Colors.green, child: Icon(Icons.phone, color: Colors.white, size: 18)),
-            onPressed: () async {
-              final phone = donor['phone'];
-              if (phone != null) {
-                final Uri launchUri = Uri(scheme: 'tel', path: phone);
-                if (await canLaunchUrl(launchUri)) await launchUrl(launchUri);
-              }
-            },
-          ),
-        ],
+            // স্ট্যাটাস মেসেজ
+            if (!canDonate) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                decoration: BoxDecoration(
+                  color: !isAvailable ? Colors.grey[100] : Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      !isAvailable ? Icons.do_not_disturb_on : Icons.info_outline, 
+                      size: 14, 
+                      color: !isAvailable ? Colors.grey : Colors.orange
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      !isAvailable ? "Not Ready to Donate!" : "Next Eligible: $nextDate",
+                      style: TextStyle(
+                        color: !isAvailable ? Colors.grey : Colors.orange, 
+                        fontSize: 12, 
+                        fontWeight: FontWeight.bold
+                      )
+                    ),
+                  ],
+                ),
+              ),
+            ]
+          ],
+        ),
       ),
     );
   }

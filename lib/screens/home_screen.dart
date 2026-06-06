@@ -8,6 +8,7 @@ import 'search_donor_screen.dart';
 import 'donor_list_screen.dart';
 import 'request_details_screen.dart';
 import 'donation_tips_screen.dart';
+import 'my_requests_screen.dart';
 import '../utils/constants.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -61,7 +62,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // সময়ের পার্থক্য বের করার জন্য ছোট একটি ফাংশন
   String _getTimeAgo(Timestamp? timestamp) {
     if (timestamp == null) return "Just now";
     DateTime postDate = timestamp.toDate();
@@ -81,34 +81,90 @@ class _HomeScreenState extends State<HomeScreen> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 120.0,
+            expandedHeight: 180.0,
             pinned: true,
             backgroundColor: AppColors.primaryRed,
             elevation: 0,
             iconTheme: const IconThemeData(color: Colors.white),
+            actions: [
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'my_requests') {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const MyRequestsScreen()));
+                  }
+                },
+                icon: const Icon(Icons.more_vert, color: Colors.white),
+                itemBuilder: (BuildContext context) => [
+                  const PopupMenuItem<String>(
+                    value: 'my_requests',
+                    child: Row(
+                      children: [
+                        Icon(Icons.favorite, color: AppColors.primaryRed, size: 18),
+                        SizedBox(width: 10),
+                        Text('My Blood Requests'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [AppColors.primaryRed, Color(0xFFC62828)]),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.primaryRed, Color(0xFFB71C1C)],
+                  ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(60, 50, 20, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 90, 20, 15),
                   child: Row(
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text("Hello, $userName 👋", style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                          const Text("Ready to save a life today?", style: TextStyle(color: Colors.white70, fontSize: 12)),
-                        ],
+                      // প্রোফাইল পিকচার বাম দিকে
+                      Container(
+                        margin: const EdgeInsets.only(top: 20),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white.withOpacity(0.3), width: 3),
+                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10)],
+                        ),
+                        child: CircleAvatar(
+                          radius: 35,
+                          backgroundColor: Colors.white24,
+                          backgroundImage: profileImage != null ? NetworkImage(profileImage!) : null,
+                          child: profileImage == null ? const Icon(Icons.person, color: Colors.white, size: 35) : null,
+                        ),
                       ),
-                      const Spacer(),
-                      CircleAvatar(
-                        radius: 22,
-                        backgroundColor: Colors.white24,
-                        backgroundImage: profileImage != null ? NetworkImage(profileImage!) : null,
-                        child: profileImage == null ? const Icon(Icons.person, color: Colors.white) : null,
+                      const SizedBox(width: 15), // পিকচার ও টেক্সটের মাঝে গ্যাপ
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Hello,", 
+                              style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 14),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              userName, 
+                              style: const TextStyle(
+                                color: Colors.white, 
+                                fontSize: 22, 
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                            const SizedBox(height: 5),
+                            const Text(
+                              "Ready to save a life today?", 
+                              style: TextStyle(color: Colors.white70, fontSize: 13, fontStyle: FontStyle.italic),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -123,15 +179,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 _buildStatsSection(),
                 const Padding(
                   padding: EdgeInsets.fromLTRB(20, 20, 20, 10),
-                  child: Text("Quick Actions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: Text("Quick Actions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
                     children: [
-                      _buildActionCard(context, "Search", Icons.search, Colors.blue, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SearchDonorScreen()))),
+                      _buildActionCard(context, "Search", Icons.search_rounded, Colors.blue, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SearchDonorScreen()))),
                       const SizedBox(width: 15),
-                      _buildActionCard(context, "Request", Icons.emergency_share, AppColors.primaryRed, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RequestBloodScreen()))),
+                      _buildActionCard(context, "Request", Icons.emergency_rounded, AppColors.primaryRed, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RequestBloodScreen()))),
                     ],
                   ),
                 ),
@@ -140,15 +196,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
                     children: [
-                      _buildActionCard(context, "Tips", Icons.lightbulb_outline, Colors.orange, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const DonationTipsScreen()))),
+                      _buildActionCard(context, "Tips", Icons.lightbulb_rounded, Colors.orange, () => Navigator.push(context, MaterialPageRoute(builder: (context) => const DonationTipsScreen()))),
                       const SizedBox(width: 15),
-                      _buildActionCard(context, isDonor ? "Active" : "Be Donor", isDonor ? Icons.favorite : Icons.favorite_border, isDonor ? Colors.green : Colors.pink, () => _toggleDonorStatus(isDonor)),
+                      _buildActionCard(context, isDonor ? "Active" : "Be Donor", isDonor ? Icons.favorite_rounded : Icons.favorite_outline_rounded, isDonor ? Colors.green : Colors.pink, () => _toggleDonorStatus(isDonor)),
                     ],
                   ),
                 ),
                 const Padding(
                   padding: EdgeInsets.fromLTRB(20, 30, 20, 10),
-                  child: Text("Urgent Blood Requests", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: Text("Urgent Blood Requests", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
                 ),
               ],
             ),
@@ -156,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
           StreamBuilder<QuerySnapshot>(
             stream: _firestore.collection('blood_requests').orderBy('createdAt', descending: true).limit(10).snapshots(),
             builder: (context, snapshot) {
-              if (!snapshot.hasData) return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()));
+              if (!snapshot.hasData) return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator(color: AppColors.primaryRed)));
               return SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
@@ -179,11 +235,30 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.all(20),
       child: Row(
         children: [
-          _buildStatItem("1.5k+", "Donors", Icons.people, Colors.blue),
-          const SizedBox(width: 15),
-          _buildStatItem("900+", "Lives Saved", Icons.volunteer_activism, Colors.orange),
-          const SizedBox(width: 15),
-          _buildStatItem("24/7", "Active", Icons.flash_on, Colors.green),
+          StreamBuilder<QuerySnapshot>(
+            stream: _firestore.collection('users').snapshots(),
+            builder: (context, snapshot) {
+              int count = snapshot.hasData ? snapshot.data!.docs.length : 0;
+              String display = count >= 1000 ? "${(count/1000).toStringAsFixed(1)}k+" : "$count";
+              return _buildStatItem(display, "Donors", Icons.people_alt_rounded, Colors.blue);
+            }
+          ),
+          const SizedBox(width: 10),
+          StreamBuilder<QuerySnapshot>(
+            stream: _firestore.collection('blood_requests').where('status', isEqualTo: 'completed').snapshots(),
+            builder: (context, snapshot) {
+              int count = snapshot.hasData ? snapshot.data!.docs.length : 0;
+              return _buildStatItem("$count", "Lives Saved", Icons.volunteer_activism_rounded, Colors.orange);
+            }
+          ),
+          const SizedBox(width: 10),
+          StreamBuilder<QuerySnapshot>(
+            stream: _firestore.collection('users').where('isAvailable', isEqualTo: true).snapshots(),
+            builder: (context, snapshot) {
+              int count = snapshot.hasData ? snapshot.data!.docs.length : 0;
+              return _buildStatItem("$count", "Active", Icons.flash_on_rounded, Colors.green);
+            }
+          ),
         ],
       ),
     );
@@ -193,12 +268,17 @@ class _HomeScreenState extends State<HomeScreen> {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(15)),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08), 
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: color.withOpacity(0.1)),
+        ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 20),
-            Text(value, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: color)),
-            Text(label, style: TextStyle(fontSize: 9, color: color.withOpacity(0.8))),
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 4),
+            Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+            Text(label, style: TextStyle(fontSize: 9, color: color.withOpacity(0.7), fontWeight: FontWeight.w500)),
           ],
         ),
       ),
@@ -209,18 +289,24 @@ class _HomeScreenState extends State<HomeScreen> {
     return Expanded(
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 20),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.08),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: color.withOpacity(0.15)),
+            border: Border.all(color: color.withOpacity(0.1)),
+            boxShadow: [BoxShadow(color: color.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
           ),
           child: Column(
             children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(height: 8),
-              Text(title, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+                child: Icon(icon, color: color, size: 28),
+              ),
+              const SizedBox(height: 10),
+              Text(title, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14)),
             ],
           ),
         ),
@@ -230,51 +316,94 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildRequestCard(BuildContext context, Map<String, dynamic> request) {
     bool isUrgent = request['isEmergency'] ?? false;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: isUrgent ? Border.all(color: Colors.red.shade100) : null,
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
-      child: InkWell(
-        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => RequestDetailsScreen(request: request))),
-        child: Row(
-          children: [
-            Container(
-              width: 55,
-              height: 55,
-              decoration: BoxDecoration(color: isUrgent ? Colors.red : AppColors.secondaryRed, borderRadius: BorderRadius.circular(15)),
-              child: Center(child: Text(request['bloodGroup'] ?? "?", style: TextStyle(color: isUrgent ? Colors.white : AppColors.primaryRed, fontSize: 20, fontWeight: FontWeight.bold))),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    bool isCompleted = request['status'] == 'completed';
+
+    return Opacity(
+      opacity: isCompleted ? 0.7 : 1.0,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: isCompleted ? Colors.green.shade100 : (isUrgent ? Colors.red.shade100 : Colors.grey.shade100)
+          ),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))],
+        ),
+        child: InkWell(
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => RequestDetailsScreen(request: request))),
+          child: Row(
+            children: [
+              Container(
+                width: 55,
+                height: 55,
+                decoration: BoxDecoration(
+                  color: isCompleted 
+                      ? Colors.green.shade50 
+                      : (isUrgent ? Colors.red : AppColors.secondaryRed), 
+                  borderRadius: BorderRadius.circular(15)
+                ),
+                child: Center(
+                  child: Text(
+                    request['bloodGroup'] ?? "?", 
+                    style: TextStyle(
+                      color: isCompleted 
+                          ? Colors.green 
+                          : (isUrgent ? Colors.white : AppColors.primaryRed), 
+                      fontSize: 20, 
+                      fontWeight: FontWeight.bold
+                    )
+                  )
+                ),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      request['hospitalName'] ?? "Hospital", 
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold, 
+                        fontSize: 15,
+                        color: Colors.black87,
+                        decoration: isCompleted ? TextDecoration.lineThrough : null,
+                      ), 
+                      overflow: TextOverflow.ellipsis
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_rounded, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Expanded(child: Text(request['location'] ?? "Unknown", style: const TextStyle(color: Colors.grey, fontSize: 12), overflow: TextOverflow.ellipsis)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(request['hospitalName'] ?? "Hospital", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
-                      const SizedBox(width: 4),
-                      Expanded(child: Text(request['location'] ?? "Unknown", style: const TextStyle(color: Colors.grey, fontSize: 13), overflow: TextOverflow.ellipsis)),
-                    ],
-                  ),
+                  Text(_getTimeAgo(request['createdAt']), style: const TextStyle(color: Colors.grey, fontSize: 10)),
+                  const SizedBox(height: 5),
+                  if (isCompleted)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), 
+                      decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(6)), 
+                      child: const Text("COLLECTED", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold))
+                    )
+                  else if (isUrgent) 
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3), 
+                      decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(6)),
+                      child: const Text("URGENT", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold))
+                    ),
                 ],
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(_getTimeAgo(request['createdAt']), style: const TextStyle(color: Colors.grey, fontSize: 10)),
-                const SizedBox(height: 5),
-                if (isUrgent) Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(5)), child: const Text("URGENT", style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold))),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -31,39 +31,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       User? user = _auth.currentUser;
       if (user != null) {
-        DocumentSnapshot doc = await _firestore.collection('users').doc(user.uid).get();
-        if (doc.exists) {
-          setState(() {
-            userData = doc.data() as Map<String, dynamic>;
-          });
-        }
+        _firestore.collection('users').doc(user.uid).snapshots().listen((doc) {
+          if (doc.exists && mounted) {
+            setState(() {
+              userData = doc.data() as Map<String, dynamic>;
+              _isLoading = false;
+            });
+          }
+        });
       }
     } catch (e) {
       debugPrint("Error fetching profile: $e");
-    } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // রক্তদানের যোগ্যতা চেক করার ফাংশন
-  Map<String, dynamic> _checkEligibility(Timestamp? lastDonation) {
-    if (lastDonation == null) return {'isEligible': true, 'message': 'Ready to Donate!'};
+  Map<String, dynamic> _checkStatus(Timestamp? lastDonation, bool isAvailable) {
+    if (!isAvailable) {
+      return {
+        'isEligible': false, 
+        'message': 'Not Ready to Donate!',
+        'color': Colors.grey
+      };
+    }
+
+    if (lastDonation == null) {
+      return {
+        'isEligible': true, 
+        'message': 'Ready to Donate!',
+        'color': Colors.green
+      };
+    }
     
     DateTime lastDate = lastDonation.toDate();
-    DateTime nextEligibleDate = lastDate.add(const Duration(days: 120)); // ৪ মাস পর
+    DateTime nextEligibleDate = lastDate.add(const Duration(days: 120));
     bool isEligible = DateTime.now().isAfter(nextEligibleDate);
     
     if (isEligible) {
-      return {'isEligible': true, 'message': 'Ready to Donate!'};
+      return {
+        'isEligible': true, 
+        'message': 'Ready to Donate!',
+        'color': Colors.green
+      };
     } else {
       String dateStr = DateFormat('dd MMM yyyy').format(nextEligibleDate);
-      return {'isEligible': false, 'message': 'Next Eligible: $dateStr'};
+      return {
+        'isEligible': false, 
+        'message': 'Next Eligible: $dateStr',
+        'color': Colors.yellow[700]
+      };
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    var eligibility = _checkEligibility(userData?['lastDonationDate']);
+    var status = _checkStatus(
+      userData?['lastDonationDate'], 
+      userData?['isAvailable'] ?? false
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -104,18 +129,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: (userData?['profileImage'] == null) ? const Icon(Icons.person, size: 60, color: AppColors.primaryRed) : null,
                         ),
                         const SizedBox(height: 15),
-                        Text(userData?['name'] ?? "User Name", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
-                        
-                        // Eligibility Badge
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Text(
+                            userData?['name'] ?? "User Name", 
+                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                         Container(
                           margin: const EdgeInsets.only(top: 10),
                           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
                           decoration: BoxDecoration(
-                            color: eligibility['isEligible'] ? Colors.green : Colors.yellow[700],
+                            color: status['color'],
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
-                            eligibility['message'],
+                            status['message'],
                             style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -166,12 +197,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Icon(icon, color: AppColors.primaryRed, size: 20),
             const SizedBox(width: 15),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-              ],
+            Expanded( // এখানে Expanded যোগ করা হয়েছে যাতে লম্বা টেক্সট ওভারফ্লো না করে
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                  Text(
+                    value, 
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    overflow: TextOverflow.ellipsis, // লম্বা টেক্সট থাকলে '...' দেখাবে
+                  ),
+                ],
+              ),
             )
           ],
         ),
